@@ -43,6 +43,7 @@ public:
     ~MNISTDataset()
     {
         if (m_buffer) free(m_buffer);
+        if (m_categoryBuffer) free(m_categoryBuffer);
     }
 
     void Print()
@@ -59,7 +60,7 @@ public:
                 printf("\n");
             }
 
-            printf("\n ===> cat(%d)\n\n", n, m_categoryBuffer[n]);
+            printf("\n [%d] ===> cat(%u)\n\n", n, m_categoryBuffer[n]);
         }
     }
 
@@ -88,7 +89,7 @@ public:
         return m_imageBuffer;
     }
 
-    const float* GetCategoryData() const
+    const uint8_t* GetCategoryData() const
     {
         return m_categoryBuffer;
     }
@@ -106,15 +107,17 @@ public:
             printf("Failed to open %s for reading\n", imageFile);
             return 1;
         }
-        std::shared_ptr<FILE> autofimg(fimg, [](FILE* f) { if (f) { fclose(f); }});
-
+        
         FILE* flabel = nullptr;
         if (0 != fopen_s(&flabel, labelFile, "rb"))
         {
             printf("Failed to open %s for reading\n", labelFile);
             return 1;
         }
-        std::shared_ptr<FILE> autoflabel(flabel, [](FILE* f) { if (f) { fclose(f); }});
+        //std::shared_ptr<void> autofimg(nullptr, [fimg, flabel](void*) {
+        //    // if (fimg) fclose(fimg);
+        //    // if (flabel) fclose(flabel);
+        //});
 
         uint32_t value;
 
@@ -161,7 +164,7 @@ public:
         Initialize(cols, rows, count);
 
         size_t counter = 0;
-        while (!feof(fimg) && !feof(flabel))
+        while (!feof(fimg) && !feof(flabel) && counter < m_count)
         {
             float* imageBuffer = &m_imageBuffer[counter * m_imageSize];
 
@@ -178,7 +181,7 @@ public:
 
             uint8_t cat;
             fread_s(&cat, sizeof(uint8_t), sizeof(uint8_t), 1, flabel);
-            assert(cat >= 0 && cat <= 9);
+            assert(cat >= 0 && cat < c_categoryCount);
             m_categoryBuffer[counter] = cat;
 
             ++counter;
@@ -194,14 +197,9 @@ private:
         m_imageSize = m_width * m_height;
         m_count = count;
 
-        const size_t bufferSize =
-            m_count * m_width * m_height
-            + m_count * c_categoryCount
-            ;
-
-        m_buffer = (float*)malloc(bufferSize * sizeof(float));
+        m_buffer = (float*)malloc(m_count * m_imageSize * sizeof(float));
         m_imageBuffer = m_buffer;
-        m_categoryBuffer = m_imageBuffer + (m_count * m_width * m_height);
+        m_categoryBuffer = (uint8_t*)malloc(m_count * sizeof(uint8_t));
     }
 
     // The total number of images
@@ -217,7 +215,7 @@ private:
     static const int c_categoryCount = 10;
 
     // 1-of-N label of the image data (N = 10) 
-    float* m_categoryBuffer;
+    uint8_t* m_categoryBuffer;
 
     // The entire buffers that stores both the image data and the category data
     float* m_buffer;
