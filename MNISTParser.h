@@ -114,10 +114,10 @@ public:
             printf("Failed to open %s for reading\n", labelFile);
             return 1;
         }
-        //std::shared_ptr<void> autofimg(nullptr, [fimg, flabel](void*) {
-        //    // if (fimg) fclose(fimg);
-        //    // if (flabel) fclose(flabel);
-        //});
+        std::shared_ptr<void> autofimg(nullptr, [fimg, flabel](void*) {
+            if (fimg) fclose(fimg);
+            if (flabel) fclose(flabel);
+        });
 
         uint32_t value;
 
@@ -181,7 +181,7 @@ public:
 
             uint8_t cat;
             fread_s(&cat, sizeof(uint8_t), sizeof(uint8_t), 1, flabel);
-            assert(cat >= 0 && cat < c_categoryCount);
+            // assert(cat >= 0 && cat < c_categoryCount);
             m_categoryBuffer[counter] = cat;
 
             ++counter;
